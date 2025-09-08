@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 
 import connectDB from "./config/db.js";
 import userRoutes from "./routes/user.routes.js";
+import channelRoutes from "./routes/channel.routes.js";
 
 // configuring environment variables
 dotenv.config();
@@ -24,6 +25,8 @@ app.use(cookieParser());
 app.use(express.json());
 
 app.use("/api/user",userRoutes)
+
+app.use("/api/channel",channelRoutes)
 // starting the server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
