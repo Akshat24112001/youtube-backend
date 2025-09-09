@@ -19,7 +19,12 @@ const app = express();
 // setting up the port on which server is running
 const PORT = process.env.PORT || 4000;
 // setting cors settings
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL, // client server
+    credentials: true,
+  })
+);
 // setting up cookie parser for using cookies
 app.use(cookieParser());
 // so that express can read json formatted file
