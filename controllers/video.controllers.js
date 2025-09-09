@@ -177,3 +177,91 @@ export const getCurrentVideo = async (req, res) => {
       .json({ message: "Unable to fetch video", error: error.message });
   }
 };
+
+export const deleteVideo = async (req, res) => {
+  // getting video ID from the url
+  const videoId = req.params.id;
+  try {
+    // getting video data from the database
+    const video = await videoModel.findById(videoId);
+    //  in cae the video is not found
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+    // extracting the public id of the video from the url
+    const videoPublicId = getPublicIdFromUrl(video.videoUrl);
+    // extracting the public id of the video's thumbnail from the url
+    const thumbnailPublicId = getPublicIdFromUrl(video.thumbnailUrl);
+    // removing video from the cloudinary cloud
+    await cloudinary.uploader.destroy(videoPublicId, {
+      resource_type: "video",
+    });
+    // removing thumbnail from the cloudinary storage
+    await cloudinary.uploader.destroy(thumbnailPublicId, {
+      resource_type: "image",
+    });
+
+    //  deletingth evideo data from the channel collection
+    if (video.channelId) {
+      await channelModel.findByIdAndUpdate(video.channelId, {
+        $pull: { videos: video._id },
+      });
+    }
+    // deleting video data from video collection
+    await videoModel.findByIdAndDelete(videoId);
+
+    return res.status(200).json({ message: "Video deleted successfully" });
+  } catch (error) {
+    // in case there is an error while deleting the video
+    return res
+      .status(500)
+      .json({ message: "Unable to delete the video", error: error.message });
+  }
+};
+
+// controller for editing video details
+export const editVideo = async (req, res) => {
+  try {
+    // getting video id from the url
+    const { id } = req.params;
+    // getting title,description and tags from the request body
+    const { title, description, tags } = req.body;
+
+    // Finding video with the video id
+    const video = await videoModel.findById(id);
+    // in case the video is not found
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+
+    // Check ownership (only uploader can edit)
+    if (video.uploader.toString() !== req.user._id.toString()) {
+      return res
+        .status(403)
+        .json({ message: "Not authorized to edit this video" });
+    }
+
+    // Update fields if provided
+    if (title !== undefined) video.title = title;
+    if (description !== undefined) video.description = description;
+
+    if (tags !== undefined) {
+      const cleaned = (Array.isArray(tags) ? tags : [])
+        .map((t) => (typeof t === "string" ? t.trim() : ""))
+        .filter(Boolean)
+        .slice(0, 2);
+      video.tags = cleaned;
+    }
+    // savingthe changes to the database
+    const updatedVideo = await video.save();
+    // sending the updated video data with the success message
+    res.status(200).json({
+      message: "Video updated successfully",
+      video: updatedVideo,
+    });
+  } catch (error) {
+    // in case there is an error while updating video
+    console.error("Error editing video:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

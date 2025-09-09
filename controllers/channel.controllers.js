@@ -16,7 +16,11 @@ export const getCurrentChannel = async (req, res) => {
   }
   try {
     // getting channel from database
-    const channel = await channelModel.findById(id);
+    const channel = await channelModel.findById(id).populate({
+      path: "videos",
+      select: "title thumbnailUrl duration views createdAt description tags", // also getting required video details
+      options: { sort: { createdAt: -1 } }, // sort newest first
+    });
 
     // in case channel is not found
     if (!channel) {
