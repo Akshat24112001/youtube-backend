@@ -3,7 +3,29 @@ import multer from "multer";
 // Required for Cloudinary stream upload
 const storage = multer.memoryStorage();
 
+// Video Upload
+// for checking the type of file to be uploaded
+const fileFilter = (req, file, cb) => {
+  // types of files that are allowed
+  const allowedTypes = ["video/mp4", "video/mov", "video/quicktime"];
+  // verifing the video type
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Invalid file type. Only MP4/MOV allowed."), false);
+  }
+};
+
+// sending the video for upload
+const videoUpload = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB limit
+}).single("video"); // name of the file
+
+export { videoUpload };
 // Image Upload
+
 // for checking the type of images
 const imageFileFilter = (req, file, cb) => {
   // allowed types of images
