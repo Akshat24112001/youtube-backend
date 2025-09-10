@@ -8,6 +8,7 @@ import connectDB from "./config/db.js";
 import userRoutes from "./routes/user.routes.js";
 import channelRoutes from "./routes/channel.routes.js";
 import videoRouter from "./routes/video.routes.js";
+import commentRoutes from "./routes/comment.routes.js";
 
 // configuring environment variables
 dotenv.config();
@@ -30,11 +31,12 @@ app.use(cookieParser());
 // so that express can read json formatted file
 app.use(express.json());
 
+// api routes
 app.use("/api/user",userRoutes)
-
 app.use("/api/video",videoRouter)
-
 app.use("/api/channel",channelRoutes)
+app.use("/api/comment",commentRoutes)
+
 // starting the server
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
