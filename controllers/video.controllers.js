@@ -178,6 +178,7 @@ export const getCurrentVideo = async (req, res) => {
   }
 };
 
+// controller for deleting video
 export const deleteVideo = async (req, res) => {
   // getting video ID from the url
   const videoId = req.params.id;
@@ -216,6 +217,50 @@ export const deleteVideo = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Unable to delete the video", error: error.message });
+  }
+};
+
+// getting the tag names of the top categories
+export const getTopTags = async (req, res) => {
+  try {
+    // getting all the tags
+    const tags = await videoModel.aggregate([
+      { $unwind: "$tags" }, // split into multiple documents
+      { $group: { _id: "$tags", count: { $sum: 1 } } }, // groups with uniquw ids and count the number of occurances
+      { $sort: { count: -1 } }, // arranging by highest to lowest count
+      { $limit: 10 }, // sets the limit to 10
+      { $project: { _id: 0, tag: "$_id" } }, // keep only tag name
+    ]);
+
+    // flatten into array of strings
+    const formattedTags = tags.map((t) => t.tag);
+    // returning the array of tags
+    res.status(200).json({ tags: formattedTags });
+  } catch (error) {
+    // in case there is error fetching the tags
+    res
+      .status(500)
+      .json({ message: "Failed to fetch top tags", error: error.message });
+  }
+};
+
+// getting videos by tag names
+export const getVideosByTag = async (req, res) => {
+  try {
+    // getting tag name from the url
+    const { tag } = req.params;
+    // getting videos with specified tag name
+    const videos = await videoModel
+      .find({ tags: tag })
+      .sort({ createdAt: -1 }) // aranging with recent first
+      .populate("channelId", "channelName channelAvatar");
+    //  returning the response with list of videos
+    res.status(200).json(videos);
+  } catch (error) {
+    // in case there is an error whil;e fetching videos with tags
+    res
+      .status(500)
+      .json({ message: "Failed to fetch videos by tag", error: error.message });
   }
 };
 
@@ -262,6 +307,31 @@ export const editVideo = async (req, res) => {
   } catch (error) {
     // in case there is an error while updating video
     console.error("Error editing video:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// controller for updating the views in the video
+export const addView = async (req, res) => {
+  try {
+    // getting video id from params
+    const { id } = req.params;
+    // from protect middleware
+    const userId = req.user._id;
+    // finding video by video id
+    const video = await videoModel.findById(id);
+    if (!video) return res.status(404).json({ message: "Video not found" });
+
+    // Only push if not already in array
+    if (!video.views.includes(userId)) {
+      video.views.push(userId);
+      await video.save();
+    }
+    //  sending the length of views array which is the number of views
+    res.status(200).json({ views: video.views.length });
+  } catch (error) {
+    // in case there is an error while incresing the views of video
+    console.error("Error adding view:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
