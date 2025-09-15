@@ -9,7 +9,7 @@ import cloudinary from "../config/cloudinary.js";
 export const getCurrentChannel = async (req, res) => {
   // getting channel id from params
   const { id } = req.params;
- 
+
   // in case no id is present or it is not a valid ObjectId
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ message: "Invalid Channel ID" });

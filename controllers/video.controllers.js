@@ -128,7 +128,7 @@ export const uploadVideo = async (req, res) => {
     // in case video upload fails
     return res
       .status(500)
-      .json({ message: "Uplaod Failed!!", error: error.message });
+      .json({ message: "Upload Failed!!", error: error.message });
   }
 };
 

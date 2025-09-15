@@ -1,5 +1,5 @@
 import userModel from "../models/user.models.js";
-// import channelModel from "../models/channel.models.js";
+import channelModel from "../models/channel.models.js";
 
 import { generateToken } from "../utils/generateToken.js";
 import bcrypt from "bcrypt";
@@ -19,7 +19,7 @@ export const loginUser = async (req, res) => {
   // getting email and password from the request body
   const email = req.body?.email.trim().toLowerCase();
   const password = req.body?.password.trim();
- 
+
   // in case email or password is absent in the request body
   if (!email || !password) {
     return res
@@ -132,6 +132,17 @@ export const registerUser = async (req, res) => {
       email,
       password: hashedPassword,
     });
+    // initializing the channel avatar
+    let channelAvatar = null;
+    // checking if channel exists
+    if (newUser.channel) {
+      const channel = await channelModel
+        .findById(newUser.channel)
+        .select("channelAvatar");
+      if (channel) {
+        channelAvatar = channel.channelAvatar;
+      }
+    }
     // sending the modified response
     res.status(200).json({
       _id: newUser._id,
@@ -139,6 +150,7 @@ export const registerUser = async (req, res) => {
       email: newUser.email,
       channel: newUser.channel,
       isChannelCreated: newUser.isChannelCreated,
+      channelAvatar: channelAvatar,
     });
   } catch (error) {
     // in case registration fails
