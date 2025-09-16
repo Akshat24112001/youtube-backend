@@ -119,3 +119,93 @@ export const createChannel = async (req, res) => {
       .json({ message: "Unable to create channel", error: error.message });
   }
 };
+
+// Controller for editing channel
+export const editChannel = async (req, res) => {
+  try {
+    const user = req.user; // comes from protect middleware
+    if (!user || !user.isChannelCreated) {
+      return res
+        .status(403)
+        .json({ message: "You don't have a channel to edit" });
+    }
+
+    // get existing channel
+    const channel = await channelModel.findById(user.channel);
+    if (!channel) {
+      return res.status(404).json({ message: "Channel not found" });
+    }
+
+    // fields to update
+    const updates = {};
+    const userUpdates = {}; // for user model
+    if (req.body.channelName) {
+      const newName = req.body.channelName.trim();
+      if (!newName) {
+        return res.status(400).json({ message: "Channel name cannot be empty" });
+      }
+      // check uniqueness if changed
+      if (newName !== channel.channelName) {
+        const exists = await channelModel.findOne({ channelName: newName });
+        if (exists) {
+          return res.status(400).json({ message: "Channel name already exists" });
+        }
+      }
+      updates.channelName = newName;
+    }
+
+    if (req.body.description) {
+      updates.description = req.body.description.trim();
+    }
+
+    // handle avatar upload
+    if (req.files?.channelAvatar?.[0]) {
+      const avatarResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "channel_avatar" },
+          (err, result) => (err ? reject(err) : resolve(result))
+        );
+        stream.end(req.files.channelAvatar[0].buffer);
+      });
+      updates.channelAvatar = avatarResult.secure_url;
+      userUpdates.channelAvatar = avatarResult.secure_url;
+    }
+
+    // handle banner upload
+    if (req.files?.channelBanner?.[0]) {
+      const bannerResult = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "channel_banner" },
+          (err, result) => (err ? reject(err) : resolve(result))
+        );
+        stream.end(req.files.channelBanner[0].buffer);
+      });
+      updates.channelBanner = bannerResult.secure_url;
+    }
+
+    // apply updates
+    const updatedChannel = await channelModel.findByIdAndUpdate(
+      channel._id,
+      { $set: updates },
+      { new: true }
+    );
+
+    // update user with new channel info
+    const updatedUser = await userModel.findByIdAndUpdate(
+      user._id,
+      { $set: userUpdates },
+      { new: true }
+    ).select("-password");
+
+
+    return res.status(200).json({
+      message: "Channel updated successfully",
+      channel: updatedChannel,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      message: "Unable to update channel",
+      error: error.message,
+    });
+  }
+};
